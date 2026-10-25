@@ -1,6 +1,7 @@
 import { computeChart, patternKey, ZHI } from './ziwei.js';
 import { getReading } from './content.js';
 import { explainChart, pairReading, HUA_LEGEND } from './explain.js';
+import { openChartAnimation } from './animation.js';
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -18,6 +19,7 @@ const el = {
   pairAsks: $('pairAsks'), pairShare: $('pairShare'),
   facts: $('facts'), copy: $('copy'), save: $('save'), share: $('share'), back: $('back'),
   random: $('random'), toast: $('toast'), lightbox: $('lightbox'), lightboxInner: $('lightboxInner'),
+  anim: $('anim'),
 };
 
 const GRID_POS = {
@@ -562,6 +564,14 @@ el.save.addEventListener('click', async () => {
     console.error(err);
     toast('生成失败，可以直接截图');
   }
+});
+
+el.anim.addEventListener('click', () => {
+  if (!current) {
+    toast('先起一盘，再看排盘过程');
+    return;
+  }
+  openChartAnimation(current.chart);
 });
 
 el.card.addEventListener('click', () => {
