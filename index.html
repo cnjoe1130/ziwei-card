@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>紫微 · 十二宫</title>
+<meta name="description" content="输入出生时间，得到一张紫微斗数命盘卡。只讲你面对世界的方式，不预测吉凶。">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="aura" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="masthead">
+  <div class="wordmark"><span class="seal-mark" aria-hidden="true">斗</span>紫微 · 十二宫</div>
+  <div class="masthead-note">不预测 · 只描述</div>
+</header>
+
+<main>
+  <section class="intro" id="intro">
+    <p class="eyebrow">命宫主星</p>
+    <h1>你的盘，<br><span>长什么样？</span></h1>
+    <p class="sub">输入出生时间。不讲吉凶，<span class="sub-break">只把你面对世界的第一反应，画成一张只属于你的盘。</span></p>
+    <p class="epigraph">斗数不讲命好命坏，只讲你惯常怎么活。</p>
+
+    <form id="form" autocomplete="off">
+      <div class="field">
+        <label for="date">出生日期</label>
+        <input id="date" name="date" type="date" min="1900-01-31" max="2100-12-31" required>
+      </div>
+      <div class="field">
+        <label for="time">出生时间</label>
+        <input id="time" name="time" type="time" value="12:00" required>
+      </div>
+      <button type="submit" class="primary">起盘</button>
+    </form>
+
+    <div class="hint-row">
+      <p class="hint">北京时间 · 时辰不确定可填 12:00 · 23:00 后算次日 · 排盘在你的浏览器里完成，我们不收集也不保存你的生日</p>
+      <button type="button" class="ghost" id="random">随便看一盘</button>
+    </div>
+    <p class="error" id="error" role="alert"></p>
+  </section>
+
+  <section class="result" id="result" hidden>
+    <div class="result-head">
+      <button type="button" class="ghost back" id="back">← 重排</button>
+      <div class="result-title">点按卡面可放大细看</div>
+      <a class="result-jump" href="#read">看解读 ↓</a>
+    </div>
+
+    <div class="stage">
+    <div class="stage-chart" id="stageChart">
+    <div class="card-frame" id="cardFrame">
+      <article class="card" id="card" data-ju="土">
+        <div class="card-head">
+          <div class="brand"><span class="brand-seal" aria-hidden="true">命</span>紫微斗数<span class="dot">·</span>十二宫</div>
+          <div class="birth" id="birth"></div>
+        </div>
+
+        <div class="verdict">
+          <div class="vtype" id="vtype"></div>
+          <h2 class="vline" id="vline"></h2>
+          <p class="vcost" id="vcost"></p>
+        </div>
+
+        <div class="chart" id="chart">
+          <div class="core">
+            <div class="sigil"><span class="sigil-ju" id="juChar">土</span></div>
+            <div class="core-ju" id="juName">土五局</div>
+            <div class="core-sub" id="coreSub"></div>
+            <div class="core-lunar" id="coreLunar"></div>
+            <div class="core-hua" id="coreHua"></div>
+          </div>
+        </div>
+
+        <div class="card-foot">
+          <span>命宫 = 第一反应</span>
+          <span>身宫 = 着力点</span>
+          <span>文化叙事 · 非预测</span>
+        </div>
+        <div class="card-side" aria-hidden="true">紫微斗數</div>
+      </article>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="primary" id="copy">复制判词</button>
+      <button type="button" class="ghost" id="save">保存图片</button>
+      <button type="button" class="ghost" id="share">分享链接</button>
+    </div>
+    <p class="toast" id="toast" aria-live="polite"></p>
+    </div>
+
+    <aside class="read" id="read">
+      <div class="read-head">
+        <p class="eyebrow">读盘</p>
+        <h3>这张盘在说什么</h3>
+        <p class="read-sub">三句人话，加一份十二宫索引。术语放在每段末尾，不看也行。</p>
+      </div>
+
+      <article class="ex">
+        <div class="ex-no">一</div>
+        <div class="ex-main">
+          <h4>你的第一反应</h4>
+          <p id="exMing"></p>
+          <p class="ex-meta" id="exMingMeta"></p>
+        </div>
+      </article>
+
+      <article class="ex">
+        <div class="ex-no">二</div>
+        <div class="ex-main">
+          <h4>你后来把劲使在哪</h4>
+          <p id="exShen"></p>
+          <p class="ex-meta" id="exShenMeta"></p>
+        </div>
+      </article>
+
+      <article class="ex">
+        <div class="ex-no">三</div>
+        <div class="ex-main">
+          <h4>最容易卡住的地方</h4>
+          <p id="exJi"></p>
+          <p class="ex-meta" id="exJiMeta"></p>
+        </div>
+      </article>
+
+      <div class="chips-wrap">
+        <p class="chips-label">另外三处会变的力气</p>
+        <ul class="chips" id="exChips"></ul>
+        <p class="chips-legend" id="exLegend"></p>
+      </div>
+
+      <div class="ex-question" id="exQuestionBox">
+        <p class="ex-q-label">带走的提问</p>
+        <p id="exQuestion"></p>
+      </div>
+
+      <div class="palace-head">
+        <h4>十二宫速读</h4>
+        <span>点开一格，盘上对应那格会亮</span>
+      </div>
+      <ol class="palace-list" id="plainList"></ol>
+      <a class="pair-jump" href="#pair">想看两个人的？做一张合盘 ↓</a>
+    </aside>
+    </div>
+
+    <section class="pair" id="pair">
+      <div class="pair-head">
+        <p class="eyebrow">合盘</p>
+        <h3>两个人，放在一起看</h3>
+        <p class="pair-sub">不评分配对。只把两张盘的反应方式摆在一起，看哪几处容易撞、哪几处刚好错开。</p>
+      </div>
+
+      <form class="pair-form" id="pairForm" autocomplete="off">
+        <div class="field">
+          <label for="pairDate">对方的出生日期</label>
+          <input id="pairDate" type="date" min="1900-01-31" max="2100-12-31" required>
+        </div>
+        <div class="field">
+          <label for="pairTime">对方的时间</label>
+          <input id="pairTime" type="time" value="12:00" required>
+        </div>
+        <button type="submit" class="primary">对照</button>
+      </form>
+      <p class="error" id="pairError" role="alert"></p>
+
+      <div class="pair-result" id="pairResult" hidden>
+        <div class="pair-cards" id="pairCards"></div>
+        <div class="pair-blocks" id="pairBlocks"></div>
+        <div class="pair-asks" id="pairAsks"></div>
+        <div class="pair-foot">
+          <p>不做评分，不预测结果。它只负责把两个人默认的做事方式摆到同一张桌上。</p>
+          <button type="button" class="ghost" id="pairShare">分享这一对</button>
+        </div>
+      </div>
+    </section>
+
+    <details class="notes">
+      <summary>这张盘怎么读</summary>
+      <div class="notes-body">
+        <p><b>先看一句。</b>命宫主星是你面对世界的第一反应，不是全部的你；判词写的是习惯，不是命。</p>
+        <p><b>再看十二宫。</b>十二个格子是你生活被切开的十二个面，主星落在哪一格，力气通常就花在哪里。</p>
+        <p><b>速读怎么用。</b>点开一格，右边的解释会展开，盘上对应那格同时亮一下；手机上点「在盘上看看」会带你回到盘面。</p>
+        <p><b>命宫空着怎么办。</b>按传统借对宫主星来读，盘上会直接标出借的是哪两颗。</p>
+        <p><b>中间那个「火六局」是什么。</b>是排盘用的参数，决定十四颗主星从哪一宫起步；它不参与性格解读，不用记。</p>
+        <p><b>格子角上的字。</b>戌、亥、子这些地支是十二宫的坐标，念盘的人用它定位；你只要认得宫名就行。</p>
+        <p><b>最后看依据。</b>下面列的是排盘用的农历、宫位与四化，方便你拿去和别的排盘工具对照。</p>
+        <dl class="facts" id="facts"></dl>
+        <p class="fine">排盘：农历月定命宫，闰月十五后按下月，23:00–23:59 按次日子时；只绘十四主星，不取庙旺与辅星；四化落在辅星时只标宫位、不绘星。内容为文化叙事，不构成任何预测或建议。</p>
+      </div>
+    </details>
+  </section>
+</main>
+
+<div class="lightbox" id="lightbox" hidden>
+  <div class="lightbox-inner" id="lightboxInner"></div>
+</div>
+
+<script src="vendor/html-to-image.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
