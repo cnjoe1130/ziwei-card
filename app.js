@@ -40,6 +40,12 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.toast.classList.remove('show'), 2200);
 }
 
+/* 移动端/iOS Safari 里原生的平滑滚动 API 在 fixed/transform 容器内行为不可靠，统一用 rect 手动滚 */
+function scrollToEl(node, offset) {
+  const r = node.getBoundingClientRect();
+  window.scrollTo({ top: window.scrollY + r.top - (offset || 24), behavior: 'smooth' });
+}
+
 function fitCard() {
   if (el.result.hidden) return;
   const host = el.stageChart.clientWidth;
@@ -288,7 +294,7 @@ function openPalace(name, options = {}) {
   });
   setRowOpen(li, true);
   spotCell(li.dataset.branch);
-  if (options.scroll) li.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (options.scroll) scrollToEl(li);
 }
 
 function renderPair(inputB, options = {}) {
@@ -360,7 +366,7 @@ function renderPair(inputB, options = {}) {
   pair = { input: inputB, chart: chartB, reading: readingB };
   syncUrl(current, inputB);
   if (options.scroll !== false) {
-    el.pairResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    scrollToEl(el.pairResult);
   }
   return true;
 }
@@ -541,11 +547,17 @@ el.save.addEventListener('click', async () => {
       backgroundColor: '#f2e9d8',
       style: { transform: 'none' },
     });
-    const a = document.createElement('a');
-    a.download = `紫微-${current.reading.label}-${current.y}${pad(current.m)}${pad(current.d)}.png`;
-    a.href = dataUrl;
-    a.click();
-    toast('图片已保存');
+    // 手机浏览器对 dataURL 下载普遍无响应；探测不到 download 能力就走灯箱长按回退
+    if ('download' in document.createElement('a')) {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `紫微-${current.reading.label}-${current.y}${pad(current.m)}${pad(current.d)}.png`;
+      a.click();
+      toast('已生成下载；手机端若无响应，再点一次→长按保存');
+    } else {
+      showLightboxImage(dataUrl);
+      toast('长按图片保存到相册');
+    }
   } catch (err) {
     console.error(err);
     toast('生成失败，可以直接截图');
@@ -558,7 +570,7 @@ el.card.addEventListener('click', () => {
   clone.removeAttribute('id');
   clone.style.transform = 'none';
   clone.style.cursor = 'default';
-  el.lightboxInner.replaceChildren(clone);
+  el.lightboxInner.replaceChildren(lightboxCloseButton(), clone);
   el.lightbox.hidden = false;
   el.lightbox.scrollTop = 0;
   document.body.style.overflow = 'hidden';
@@ -568,7 +580,7 @@ el.plainList.addEventListener('click', (e) => {
   const locate = e.target.closest('.pr-locate');
   if (locate) {
     spotCell(locate.dataset.branch);
-    el.cardFrame.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    scrollToEl(el.cardFrame);
     return;
   }
   const head = e.target.closest('.pr-head');
@@ -586,6 +598,27 @@ el.exChips.addEventListener('click', (e) => {
   if (!btn) return;
   openPalace(btn.dataset.palace, { scroll: true });
 });
+
+function lightboxCloseButton() {
+  const x = document.createElement('button');
+  x.type = 'button';
+  x.className = 'lb-close';
+  x.textContent = String.fromCharCode(215);
+  x.setAttribute('aria-label', '关闭放大图');
+  x.addEventListener('click', closeLightbox);
+  return x;
+}
+
+function showLightboxImage(dataUrl) {
+  const img = document.createElement('img');
+  img.className = 'lb-image';
+  img.alt = '长按这张图可保存到相册';
+  img.src = dataUrl;
+  el.lightboxInner.replaceChildren(lightboxCloseButton(), img);
+  el.lightbox.hidden = false;
+  el.lightbox.scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
 
 function closeLightbox() {
   el.lightbox.hidden = true;
