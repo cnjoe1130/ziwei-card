@@ -107,7 +107,7 @@ export function solarToLunar(y, m, d) {
   return { year, yearGanZhi: ganzhiOfYear(year), month, isLeap, day: off + 1 };
 }
 
-function addDays(y, m, d, n) {
+export function addDays(y, m, d, n) {
   const t = new Date(Date.UTC(y, m - 1, d) + n * 86400000);
   return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
 }

@@ -23,6 +23,17 @@
     <p class="sub">输入出生时间。不讲吉凶，<span class="sub-break">只把你面对世界的第一反应，画成一张只属于你的盘。</span></p>
     <p class="epigraph">斗数不讲命好命坏，只讲你惯常怎么活。</p>
 
+    <div class="file-warn" id="fileWarn" hidden>
+      <p class="fw-title">双击打开的本地文件是点不动的。</p>
+      <p>排盘代码写成模块，浏览器在 <code>file://</code> 下不允许加载它们，所以页面能显示、按钮没反应。在项目根目录起一个静态服务：</p>
+      <pre><code>python -m http.server 8123</code></pre>
+      <p>然后开 <code>http://127.0.0.1:8123/xuanxue/ziwei-card/</code>，或直接用线上版 <a href="https://cnjoe1130.github.io/ziwei-card/">cnjoe1130.github.io/ziwei-card</a>。</p>
+    </div>
+    <script>
+      // 必须是行内普通脚本：file:// 下 app.js 根本不会执行，只有这里还能判断。
+      if (location.protocol === 'file:') document.getElementById('fileWarn').hidden = false;
+    </script>
+
     <form id="form" autocomplete="off">
       <div class="field">
         <label for="date">出生日期</label>
@@ -40,6 +51,31 @@
       <button type="button" class="ghost" id="random">随便看一盘</button>
     </div>
     <p class="error" id="error" role="alert"></p>
+
+    <details class="calib" id="calib">
+      <summary>时辰校准（选填）</summary>
+      <div class="calib-body">
+        <p class="calib-lead">默认按钟表时间排盘，不问出生地。想按出生地经度校正的人，可以在这里校 —— 校正需要的是经度，不是星历。</p>
+        <div class="calib-row">
+          <div class="field">
+            <label for="calibCity">出生城市（可直接打字筛选）</label>
+            <input id="calibCity" list="cityList" autocomplete="off" placeholder="如 成都 / 喀什 / 琼海">
+            <datalist id="cityList"></datalist>
+          </div>
+          <div class="field">
+            <label for="calibLon">或手动经度（东经为正）</label>
+            <input id="calibLon" type="number" step="0.01" min="73" max="135" placeholder="73–135" inputmode="decimal">
+          </div>
+        </div>
+        <p class="calib-hint">表内 370 个地名取自各行政区政府驻地，仅覆盖中国境内 —— 境外出生的钟表时间不是北京时间，本工具口径不适用，直接按钟表时间起盘即可。台北按城区单点给出，高雄、台中等城市请用右侧手填经度。</p>
+        <label class="calib-dst" id="calibDstBox" hidden>
+          <input id="calibDst" type="checkbox">
+          <span>出生日在当年夏令时内 · <b id="calibDstWin"></b></span>
+        </label>
+        <p class="calib-out" id="calibOut" role="status"></p>
+        <ul class="calib-notes" id="calibNotes"></ul>
+      </div>
+    </details>
   </section>
 
   <section class="result" id="result" hidden>
@@ -48,6 +84,8 @@
       <div class="result-title">点按卡面可放大细看</div>
       <a class="result-jump" href="#read">看解读 ↓</a>
     </div>
+
+    <p class="solar-bar" id="solarBar" hidden></p>
 
     <div class="stage">
     <div class="stage-chart" id="stageChart">
@@ -89,6 +127,8 @@
       <button type="button" class="ghost" id="share">分享链接</button>
       <button type="button" class="ghost" id="anim">看排盘过程</button>
     </div>
+    <p class="actions-note">这张盘是算出来的：规则、口径与源码全部开源 →
+      <a href="https://github.com/cnjoe1130/ziwei-card" target="_blank" rel="noopener">github.com/cnjoe1130/ziwei-card</a></p>
     <p class="toast" id="toast" aria-live="polite"></p>
     </div>
 
@@ -189,6 +229,7 @@
         <p><b>最后看依据。</b>下面列的是排盘用的农历、宫位与四化，方便你拿去和别的排盘工具对照。</p>
         <dl class="facts" id="facts"></dl>
         <p class="fine">排盘：农历月定命宫，闰月十五后按下月，23:00–23:59 按次日子时；只绘十四主星，不取庙旺与辅星；四化落在辅星时只标宫位、不绘星。内容为文化叙事，不构成任何预测或建议。</p>
+        <p class="fine">本工具默认按钟表时间排盘。经度差本身就可达 1 小时以上（成都 −64 分、兰州 −65、乌鲁木齐 −130），均时差还有 ±16 分钟 —— 若你在新西部出生，或出生时刻贴近时辰交界，可用上方"时辰校准"按出生地经度校正。那恰是紫微一生只问地点的一次。</p>
       </div>
     </details>
   </section>

@@ -183,6 +183,7 @@ form {
   color-scheme: light;
 }
 .field input:focus { outline: none; border-color: var(--seal); }
+.field input::placeholder { color: var(--muted-2); opacity: 1; }
 /* Chromium 的日期/时间内部编辑器不继承字体，会掉进 Times；显式给小字号控件换字形 */
 .field input[type="date"],
 .field input[type="time"] { font-family: Arial, "Helvetica Neue", sans-serif; }
@@ -247,6 +248,88 @@ button { font-family: var(--serif); cursor: pointer; }
 
 .error { min-height: 18px; margin: 14px 0 0; font-size: 12px; color: var(--seal-deep); letter-spacing: 0.05em; }
 
+.file-warn {
+  margin: 26px 0 0;
+  padding: 16px 18px;
+  border: 1px solid var(--seal);
+  background: rgba(166, 59, 44, 0.05);
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--ink-soft);
+}
+.file-warn .fw-title { margin: 0 0 6px; font-family: var(--serif); font-size: 14px; color: var(--seal-deep); letter-spacing: 0.06em; }
+.file-warn p { margin: 0; }
+.file-warn pre { margin: 10px 0; padding: 10px 12px; border: 1px solid var(--line-strong); background: rgba(255, 252, 245, 0.7); overflow-x: auto; }
+.file-warn code { font-family: var(--mono, ui-monospace, monospace); font-size: 12.5px; }
+.file-warn a { color: var(--seal-deep); }
+
+/* ---------- 时辰校准（选填） ---------- */
+
+.calib {
+  max-width: 640px;
+  margin-top: 24px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+.calib summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+.calib summary::-webkit-details-marker { display: none; }
+.calib summary::before { content: "+ "; color: var(--seal); }
+.calib[open] summary::before { content: "− "; }
+.calib summary:hover { color: var(--ink); }
+.calib-body { margin-top: 16px; }
+.calib-lead {
+  margin: 0 0 20px;
+  font-size: 12.5px;
+  line-height: 1.95;
+  color: var(--muted-2);
+  text-wrap: pretty;
+}
+.calib-row { display: flex; gap: 22px; flex-wrap: wrap; }
+.calib .field { min-width: 172px; }
+.calib-hint {
+  margin: 16px 0 0;
+  font-size: 12.5px;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+  color: var(--muted-2);
+}
+.calib-dst {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 20px;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.calib-dst input { width: 15px; height: 15px; accent-color: var(--seal); flex: none; }
+.calib-dst b { font-weight: 500; color: var(--seal); font-variant-numeric: tabular-nums; }
+.calib-out {
+  margin: 20px 0 0;
+  font-size: 14px;
+  line-height: 1.9;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+}
+.calib-out:empty { display: none; }
+.calib-out.is-changed { color: var(--seal-deep); }
+.calib-notes { margin: 10px 0 0; padding-left: 16px; }
+.calib-notes:empty { display: none; }
+.calib-notes li {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--muted-2);
+  text-wrap: pretty;
+}
+
 /* ---------- result ---------- */
 
 .result {
@@ -276,6 +359,20 @@ button { font-family: var(--serif); cursor: pointer; }
   transition: color 0.2s ease, border-color 0.2s ease;
 }
 .result-jump:hover { color: var(--seal); border-color: var(--seal); }
+
+.solar-bar {
+  max-width: 1080px;
+  margin: 0 auto 18px;
+  padding: 11px 16px;
+  border-left: 2px solid var(--seal);
+  background: rgba(166, 59, 44, 0.06);
+  font-size: 12.5px;
+  line-height: 1.85;
+  letter-spacing: 0.03em;
+  color: var(--seal-deep);
+  font-variant-numeric: tabular-nums;
+  text-wrap: pretty;
+}
 
 .card-frame {
   position: relative;
@@ -598,6 +695,18 @@ button { font-family: var(--serif); cursor: pointer; }
   flex-wrap: wrap;
 }
 .actions .primary { padding: 14px 26px; font-size: 13px; }
+
+.actions-note {
+  margin: 16px auto 0;
+  max-width: 520px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.9;
+  letter-spacing: 0.05em;
+  color: var(--muted-2);
+}
+.actions-note a { color: var(--seal); text-decoration: none; border-bottom: 1px solid var(--line); }
+.actions-note a:hover { border-bottom-color: var(--seal); }
 
 .toast {
   min-height: 18px;
@@ -959,6 +1068,7 @@ button { font-family: var(--serif); cursor: pointer; }
   .read { margin-top: 44px; padding-top: 30px; border-top: 1px solid var(--line-strong); }
   .pr-locate { display: inline-block; }
   .result-head, .notes, .pair { max-width: 560px; margin-left: auto; margin-right: auto; }
+  .solar-bar { max-width: 560px; margin-left: auto; margin-right: auto; }
 }
 
 @media (max-width: 720px) {
@@ -1226,14 +1336,16 @@ button { font-family: var(--serif); cursor: pointer; }
   gap: 6px;
   background: var(--paper-2);
 }
-.core-gz {
+/* 动画覆盖层的 .core-* 与卡面 .core 区同名，必须限定在 .anim-core 内，
+   否则未加 .on 的 opacity: 0 会顺带把卡面局名隐掉。 */
+.anim-core .core-gz {
   font-size: 13px;
   letter-spacing: 0.22em;
   color: var(--ink-soft);
   opacity: 0;
   transition: opacity 0.4s ease;
 }
-.core-big {
+.anim-core .core-big {
   font-family: var(--serif);
   font-size: clamp(46px, 15vw, 72px);
   line-height: 1;
@@ -1241,7 +1353,7 @@ button { font-family: var(--serif); cursor: pointer; }
   opacity: 0;
   transition: opacity 0.45s ease;
 }
-.core-ju {
+.anim-core .core-ju {
   font-family: var(--serif);
   font-size: 20px;
   letter-spacing: 0.3em;
@@ -1249,16 +1361,16 @@ button { font-family: var(--serif); cursor: pointer; }
   opacity: 0;
   transition: opacity 0.45s ease;
 }
-.core-nayin {
+.anim-core .core-nayin {
   font-size: 11px;
   letter-spacing: 0.1em;
   color: var(--muted-2);
   opacity: 0;
   transition: opacity 0.45s ease;
 }
-.core-gz.on, .core-big.on, .core-ju.on, .core-nayin.on { opacity: 1; }
+.anim-core .core-gz.on, .anim-core .core-big.on, .anim-core .core-ju.on, .anim-core .core-nayin.on { opacity: 1; }
 
-.core-julist {
+.anim-core .core-julist {
   position: absolute;
   inset: 8% 14%;
   display: none;
@@ -1269,7 +1381,7 @@ button { font-family: var(--serif); cursor: pointer; }
   box-shadow: 0 18px 44px rgba(70, 45, 20, 0.14);
   padding: 10px 18px;
 }
-.core-julist.on { display: flex; }
+.anim-core .core-julist.on { display: flex; }
 .ju-row {
   display: flex;
   align-items: baseline;

@@ -2,6 +2,7 @@ import { computeChart, patternKey, ZHI } from './ziwei.js';
 import { getReading } from './content.js';
 import { explainChart, pairReading, HUA_LEGEND } from './explain.js';
 import { openChartAnimation } from './animation.js';
+import { CITIES, trueSolar, dstWindow, lonFromInput, findCity } from './solar.js';
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -19,6 +20,10 @@ const el = {
   pairAsks: $('pairAsks'), pairShare: $('pairShare'),
   facts: $('facts'), copy: $('copy'), save: $('save'), share: $('share'), back: $('back'),
   random: $('random'), toast: $('toast'), lightbox: $('lightbox'), lightboxInner: $('lightboxInner'),
+  calibCity: $('calibCity'), calibLon: $('calibLon'), calibDstBox: $('calibDstBox'),
+  cityList: $('cityList'),
+  calibDst: $('calibDst'), calibDstWin: $('calibDstWin'), calibOut: $('calibOut'),
+  calibNotes: $('calibNotes'), solarBar: $('solarBar'),
   anim: $('anim'),
 };
 
@@ -30,6 +35,8 @@ const GRID_POS = {
 };
 const HUA_CLASS = { 禄: 'lu', 权: 'quan', 科: 'ke', 忌: 'ji' };
 const pad = (n) => String(n).padStart(2, '0');
+const ymdText = (o) => `${o.y}-${pad(o.m)}-${pad(o.d)}`;
+const hmText = (o) => `${pad(o.h)}:${pad(o.min)}`;
 
 let current = null;
 let pair = null;
@@ -123,11 +130,114 @@ function renderCells(chart) {
   el.chart.insertBefore(fragment, el.chart.querySelector('.core'));
 }
 
-function renderFacts(chart, input) {
+// ---------- 时辰校准（选填）：默认路径不经过这里 ----------
+
+el.cityList.append(...CITIES.map((c) => {
+  const o = document.createElement('option');
+  o.value = c.name;
+  o.label = `东经 ${c.lon.toFixed(2)}°`;
+  return o;
+}));
+
+let linkCalibrated = false;
+
+function formInput() {
+  const dm = (el.date.value || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const tm = (el.time.value || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!dm || !tm) return null;
+  return { y: +dm[1], m: +dm[2], d: +dm[3], h: +tm[1], min: +tm[2] };
+}
+
+function calibState() {
+  return { lon: lonFromInput(el.calibCity.value, el.calibLon.value), isDST: el.calibDst.checked };
+}
+
+function updateCalib() {
+  const inp = formInput();
+  const win = inp ? dstWindow(inp.y, inp.m, inp.d) : null;
+  el.calibDstBox.hidden = !win;
+  if (win) {
+    el.calibDstWin.textContent =
+      `${inp.y} 年 ${win.from[0]} 月 ${win.from[1]} 日 02:00 — ${win.to[0]} 月 ${win.to[1]} 日 02:00`;
+  } else {
+    el.calibDst.checked = false;
+  }
+
+  const notes = [];
+  const typed = (el.calibCity.value || '').trim();
+  const city = findCity(typed);
+  const lon = city ? city.lon : lonFromInput('', el.calibLon.value);
+
+  if (!inp) {
+    el.calibOut.textContent = '先填出生日期和时间。';
+    el.calibOut.classList.remove('is-changed');
+    if (linkCalibrated) notes.push('链接里的时间已经是校准后的真太阳时；再选城市会在校准值上再校一次。');
+    renderCalibNotes(notes);
+    return;
+  }
+  if (lon == null) {
+    if (typed && !city) notes.push(`「${typed}」不在表里：从建议里选一个，或在右边手填东经度。`);
+    else if (el.calibLon.value !== '') notes.push('经度要落在 73–135（东经为正）。');
+    else notes.push('选一个出生城市，或直接填东经度。');
+    if (linkCalibrated) notes.push('链接里的时间已经是校准后的真太阳时；再选城市会在校准值上再校一次。');
+    el.calibOut.textContent = '';
+    el.calibOut.classList.remove('is-changed');
+    renderCalibNotes(notes);
+    return;
+  }
+
+  const r = trueSolar({ ...inp, lon, isDST: el.calibDst.checked });
+  const day = r.crossDay ? `${r.solar.m} 月 ${r.solar.d} 日 ` : '';
+  el.calibOut.textContent =
+    `真太阳时 ≈ ${day}${hmText(r.solar)} → ${r.solarHourName}时`
+    + `（北京时间 ${hmText(inp)} ${r.clockHourName}时 → ${r.changed ? '已调整' : '无需调整'}）`;
+  el.calibOut.classList.toggle('is-changed', r.changed);
+  notes.push(city
+    ? `按 ${city.name} · 东经 ${city.lon.toFixed(2)}° 校正。`
+    : `按手填东经 ${lon.toFixed(2)}° 校正。`);
+
+  if (r.changed) {
+    notes.push(`排盘改用 ${ymdText(r.solar)} ${hmText(r.solar)}；${r.clockHourName}时 → ${r.solarHourName}时，跨了时辰界限。`);
+    if (inp.h === 23 && r.solar.h !== 23) {
+      notes.push('原本 23:00 之后按次日子时换日，校回亥时后不再换日。');
+    }
+  } else {
+    notes.push('没跨时辰界限、也不跨日：排盘结果与不填城市完全一致。');
+  }
+  if (r.crossDay) notes.push(`日期一起${r.dayShift > 0 ? '后' : '前'}移一天：${ymdText(r.solar)}。`);
+  if (el.calibDst.checked && !r.dstApplied) {
+    notes.push('出生时刻在当天 02:00 之前，夏令时还没开始，这一段按钟表时间算。');
+  }
+  if (win && !el.calibDst.checked) {
+    notes.push('出生日落在当年夏令时窗口内：钟表时间被拨快过一小时，勾上再算一次更准。');
+  }
+  if (linkCalibrated) notes.push('链接里的时间已经是校准后的真太阳时；再选城市会在校准值上再校一次。');
+  renderCalibNotes(notes);
+}
+
+function renderCalibNotes(list) {
+  el.calibNotes.replaceChildren(...list.map((t) => {
+    const li = document.createElement('li');
+    li.textContent = t;
+    return li;
+  }));
+}
+
+for (const node of [el.date, el.time, el.calibCity, el.calibLon]) {
+  node.addEventListener('input', updateCalib);
+  node.addEventListener('change', updateCalib);
+}
+el.calibDst.addEventListener('change', updateCalib);
+updateCalib();
+
+function renderFacts(chart, input, solar, fromLink) {
   const stars = chart.mingStars.map((s) => s.name).join(' · ')
     + (chart.borrowed ? '（命宫无主星，借对宫）' : '');
   const rows = [
-    ['公历', `${input.y}-${pad(input.m)}-${pad(input.d)} ${pad(input.h)}:${pad(input.min)}（北京时间）`],
+    ['公历', solar
+      ? `${ymdText(solar.clock)} ${hmText(solar.clock)}（北京时间）`
+      : `${ymdText(input)} ${hmText(input)}（${fromLink ? '真太阳时 · 链接已校准' : '北京时间'}）`],
+    ...(solar ? [['真太阳时', `${ymdText(solar.solar)} ${hmText(solar.solar)}（已用于排盘）`]] : []),
     ['农历', chart.lunar.text],
     ['命宫', `${ZHI[chart.mingBranch]}宫 · ${chart.mingStem}${ZHI[chart.mingBranch]} · ${chart.juName}`],
     ['身宫', `${ZHI[chart.shenBranch]}宫`],
@@ -373,9 +483,11 @@ function renderPair(inputB, options = {}) {
   return true;
 }
 
-function shareUrl(input, extra) {
+function shareUrl(src, extra) {
   if (!/^https?:$/.test(location.protocol)) return null;
-  let url = `${location.origin}${location.pathname}?d=${input.y}-${pad(input.m)}-${pad(input.d)}&t=${pad(input.h)}:${pad(input.min)}`;
+  const s = src.su || src;
+  let url = `${location.origin}${location.pathname}?d=${s.y}-${pad(s.m)}-${pad(s.d)}&t=${pad(s.h)}:${pad(s.min)}`;
+  if (src.st) url += '&st=1';
   if (extra) {
     url += `&d2=${extra.y}-${pad(extra.m)}-${pad(extra.d)}&t2=${pad(extra.h)}:${pad(extra.min)}`;
   }
@@ -389,14 +501,36 @@ function syncUrl(input, extra) {
 }
 
 function render(input, options = {}) {
+  const calib = 'calib' in options ? options.calib : calibState();
+  let solar = null;
+  let chartInput = input;
+  if (calib && calib.lon != null) {
+    const r = trueSolar({ ...input, lon: calib.lon, isDST: calib.isDST });
+    if (r.changed) {
+      solar = r;
+      chartInput = r.solar;
+    }
+  }
+
   let chart;
   try {
-    chart = computeChart(input);
+    chart = computeChart(chartInput);
   } catch (err) {
     el.error.textContent = err.message;
     return false;
   }
   el.error.textContent = '';
+
+  if (solar) {
+    el.solarBar.textContent = `本盘时辰已按出生地真太阳时校准：钟表 ${ymdText(solar.clock)} ${hmText(solar.clock)}`
+      + ` → 真太阳时 ${ymdText(solar.solar)} ${hmText(solar.solar)}（${solar.solarHourName}时）`;
+    el.solarBar.hidden = false;
+  } else if (options.fromLink) {
+    el.solarBar.textContent = '本盘时辰已按出生地真太阳时校准：链接里的日期与时间就是校准后的真太阳时；出生地不随链接传输。';
+    el.solarBar.hidden = false;
+  } else {
+    el.solarBar.hidden = true;
+  }
 
   const key = chart.borrowed ? '' : patternKey(chart.mingStars);
   const reading = getReading(key) || {
@@ -425,7 +559,7 @@ function render(input, options = {}) {
   }));
 
   renderCells(chart);
-  renderFacts(chart, input);
+  renderFacts(chart, input, solar, options.fromLink);
   renderExplain(chart);
   el.result.dataset.ju = chart.wuxing;
 
@@ -435,9 +569,9 @@ function render(input, options = {}) {
 
   el.intro.hidden = true;
   el.result.hidden = false;
-  current = { ...input, chart, reading };
+  current = { ...input, chart, reading, su: solar ? solar.solar : null, st: Boolean(solar) || Boolean(options.fromLink) };
   fitCard();
-  if (options.updateUrl !== false) syncUrl(input);
+  if (options.updateUrl !== false) syncUrl(current);
   window.scrollTo({ top: 0, behavior: 'smooth' });
   return true;
 }
@@ -469,6 +603,7 @@ el.form.addEventListener('submit', (e) => {
   }
   const [y, m, d] = dateValue.split('-').map(Number);
   const [h, min] = (el.time.value || '12:00').split(':').map(Number);
+  linkCalibrated = false;
   render({ y, m, d, h, min: min || 0 });
 });
 
@@ -480,7 +615,9 @@ el.random.addEventListener('click', () => {
   const min = Math.floor(Math.random() * 60);
   el.date.value = `${y}-${pad(m)}-${pad(d)}`;
   el.time.value = `${pad(h)}:${pad(min)}`;
-  render({ y, m, d, h, min });
+  linkCalibrated = false;
+  render({ y, m, d, h, min }, { calib: { lon: null } });
+  updateCalib();
 });
 
 el.back.addEventListener('click', () => {
@@ -653,9 +790,13 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitCard);
   const dm = dateRaw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
   const tm = (params.get('t') || '12:00').match(/^(\d{1,2}):(\d{2})$/);
   if (!dm || !tm) return;
+  const st = params.get('st') === '1';
+  linkCalibrated = st;
   el.date.value = `${dm[1]}-${pad(+dm[2])}-${pad(+dm[3])}`;
   el.time.value = `${pad(+tm[1])}:${tm[2]}`;
-  render({ y: +dm[1], m: +dm[2], d: +dm[3], h: +tm[1], min: +tm[2] }, { updateUrl: false });
+  render({ y: +dm[1], m: +dm[2], d: +dm[3], h: +tm[1], min: +tm[2] },
+    { updateUrl: false, fromLink: st, calib: null });
+  updateCalib();
 
   const date2 = params.get('d2');
   if (!date2) return;
